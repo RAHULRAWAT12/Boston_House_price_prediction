@@ -1,0 +1,747 @@
+---
+title: "Boston-House-Price-Prediction"
+author: "RAHUL RAWAT"
+date: "2022-09-27"
+output: html_document
+---
+
+------------------------------------------------------------------------
+
+<b><span style = "color:green;font-size:25px;">
+<center><u>MULTIPLE LINEAR REGRESSION ON BOSTON HOUSE PRICE PREDICITON DATASET</u></center>
+
+</span></b>
+
+<p style="color:MediumSeaGreen;">
+
+<b> The Boston Housing Dataset is a derived from information collected by the U.S. Census Service concerning housing in the area of Boston MA. The following describes the dataset columns -: </b>
+
+</p>
+
+```{=html}
+<pre>
+<center><b style = "color:green;font-size:18px;">Objective - To predict the price of the house from these features</b>
+
+<b style = "color:#FFA07A">MODEL  - <u>MUILTIPLE LINEAR REGRESSION</u>
+   TARGET VARIABLE - MEDV
+LIBRARIES - "tidyverse","corrplot","lattice","caTools","plotly","MASS"</b></center>
+<b><hr></b>
+<center><b style = "color:green;font-size:18px;"><u>DATASET DESCRIPTION</u></b></center>
+The dataset describes how the house price might vary depending on several features
+<b><u>The information of the features considered</u></b> -
+      1. CRIM   -:per capita crime rate by town
+      2. ZN     -:proportion of residential land zoned for lots over 25,000 sq.ft.
+      3. INDUS  -:proportion of non-retail business acres per town.
+      4. CHAS   -:Charles River dummy variable (1 if tract bounds river; 0 otherwise)
+      5. NOX    -:nitric oxides concentration (parts per 10 million)
+      6. RM     -:average number of rooms per dwelling
+      7. AGE    -:proportion of owner-occupied units built prior to 1940
+      8. DIS    -:weighted distances to five Boston employment centres
+      9. RAD    -:index of accessibility to radial highways
+     10. TAX    -:full-value property-tax rate per $10,000
+     11. PTRATIO-:pupil-teacher ratio by town
+     12. B      -:1000(Bk - 0.63)^2 where Bk is the proportion of blacks by town
+     13. LSTAT  -:% lower status of the population
+     14. MEDV   -:Median value of owner-occupied homes in $1000's
+<b><hr></b>
+<center><b><u style = "color:green;font-size:18px;">THE STEPS FOLLOWED IN THE PROCESS OF MULTIPLE LINEAR REGRESSION</u></b></center>
+ -> Importing packages mentioned and the dataset
+ -> computing the descriptive statistics
+ -> performed exploratory data analysis
+ -> data quality and remediation
+        <b>1. checking for null vaues - found none
+        2. replaced outliers
+        3. duplicates              - found none</b>
+ -> split the dataset into training and testing data
+ -> building the model on the training dataset 
+ -> examine the summary of the model
+ -> after getting the best R2 score possible, predict the values for the training data and compute the Root mean square 
+    error
+ -> predict the values for the testing data and compute the root mean square error
+ -> Inference
+</pre>
+```
+<h2>
+
+<b>
+
+<center><u>IMPORTING LIBRARIES</u></center>
+
+</b>
+
+</h2>
+
+```{=html}
+<style type='text/css'>
+  body 
+  {
+    background-color:lavender
+   }
+  h2 
+  { color :Chili Peppe;
+    font-family:times
+   }
+</style>
+```
+```{r}
+#install.packages(c("tidyverse","corrplot","lattice","caTools","plotly","MASS"))
+library(MASS)
+library(tidyverse)
+library(lattice)
+library(corrplot)
+library(plotly)
+library(caTools)
+library(Metrics)
+library(beeswarm)
+
+# Reading the dataset
+Boston = read.csv("project/boston housing/boston.csv")
+
+# Display top 6 rows of the datasets
+head(Boston)
+
+# getting the information about dataframe
+str(Boston)
+
+# Getting the shape of dataset ( means number of rows and column)
+dim(Boston)
+                                  
+#SUMARRY
+summary(Boston)     
+
+```
+
+<h2>
+
+<b>
+
+<center><u>BOXPLOT</u></center>
+
+</b>
+
+</h2>
+
+```{=html}
+<style>
+h2{
+color :red;
+font-family:times
+}
+</style>
+```
+```{r}
+##BOXPLOT
+
+CRIM = Boston$CRIM
+ZN   = Boston$ZN
+INDUS = Boston$INDUS
+CHAS  = Boston$CHAS
+NOX   = Boston$NOX
+RM    = Boston$RM
+AGE   = Boston$AGE
+DIS   = Boston$DIS
+RAD   = Boston$RAD
+TAX   = Boston$TAX
+PTRATIO  = Boston$PTRATIO
+B   = Boston$B
+LSTAT = Boston$LSTAT
+MEDV = Boston$MEDV
+
+##BOXPLOT
+
+plot_ly(y = CRIM,name = "CRIM",type = "box")%>%
+  add_boxplot(y = ZN,name = "ZN",type = "box")%>%
+  add_boxplot(y = INDUS,name = "INDUS",type = "box")%>%
+  add_boxplot(y = CHAS,name = "CHAS",type = "box")%>%
+  add_boxplot(y = NOX,name = "NOX",type = "box")%>%
+  add_boxplot(y = RM,name = "RM",type = "box")%>%
+  add_boxplot(y = AGE,name = "AGE",type = "box")
+
+
+plot_ly(y = DIS,name = "DIS",type = "box")%>%
+  add_boxplot(y = RAD,name = "RAD",type = "box")%>%
+  add_boxplot(y = TAX,name = "TAX",type = "box")%>%
+  add_boxplot(y = PTRATIO,name ="PTRATIO",type = "box")%>%
+  add_boxplot(y = B,name ="B",type = "box")%>%
+  add_boxplot(y = LSTAT,name = "LSTAT",type = "box")%>%
+  add_boxplot(y = MEDV,name = "MEDV",type = "box")
+
+#### Columns Like CRIM,ZN,RM,B seems to have outliers.Lets see the outliers percentage in every columns
+# CRIM
+Q1_CRIM = quantile(CRIM,probs= 0.25);Q1_CRIM
+Q3_CRIM = quantile(CRIM,probs = 0.75);Q3_CRIM
+IQR_CRIM = IQR(CRIM);IQR_CRIM
+UP_CRIM = Q3_CRIM+ (1.5*IQR_CRIM);UP_CRIM
+LW_CRIM = Q1_CRIM- (1.5*IQR_CRIM);LW_CRIM
+CRIM1 = CRIM[which(CRIM >= UP_CRIM)]
+length(CRIM1)
+
+# ZN   
+Q1_ZN = quantile(ZN,probs= 0.25);Q1_ZN
+Q3_ZN = quantile(ZN,probs = 0.75);Q3_ZN
+IQR_ZN = IQR(ZN);IQR_ZN
+UP_ZN = Q3_ZN+ (1.5*IQR_ZN);UP_ZN
+LW_ZN = Q1_ZN- (1.5*IQR_ZN);LW_ZN
+ZN1 = ZN[which(ZN >= UP_ZN)]
+length(ZN1)
+
+# INDUS      
+Q1_INDUS = quantile(INDUS,probs= 0.25);Q1_INDUS
+Q3_INDUS = quantile(INDUS,probs = 0.75);Q3_INDUS
+IQR_INDUS = IQR(INDUS);IQR_INDUS
+UP_INDUS = Q3_INDUS+ (1.5*IQR_INDUS);UP_INDUS
+LW_INDUS = Q1_INDUS- (1.5*IQR_INDUS);LW_INDUS
+INDUS1 = INDUS[which(INDUS >= UP_INDUS)]
+length(INDUS1)
+  
+# CHAS    
+Q1_CHAS = quantile(CHAS,probs= 0.25);Q1_CHAS
+Q3_CHAS = quantile(CHAS,probs = 0.75);Q3_CHAS
+IQR_CHAS = IQR(CHAS);IQR_CHAS
+UP_CHAS = Q3_CHAS+ (1.5*IQR_CHAS);UP_CHAS
+LW_CHAS = Q1_CHAS- (1.5*IQR_CHAS);LW_CHAS
+CHAS1 = CHAS[which(CHAS >= UP_CHAS)]
+length(CHAS1)
+      
+# NOX
+Q1_NOX = quantile(NOX,probs= 0.25);Q1_NOX
+Q3_NOX = quantile(NOX,probs = 0.75);Q3_NOX
+IQR_NOX = IQR(NOX);IQR_NOX
+UP_NOX = Q3_NOX+ (1.5*IQR_NOX);UP_NOX
+LW_NOX = Q1_NOX- (1.5*IQR_NOX);LW_NOX
+NOX1 = NOX[which(NOX >= UP_NOX)]
+length(NOX1)
+
+# RM    
+Q1_RM = quantile(RM,probs= 0.25);Q1_RM
+Q3_RM = quantile(RM,probs = 0.75);Q3_RM
+IQR_RM = IQR(RM);IQR_RM
+UP_RM = Q3_RM+ (1.5*IQR_RM);UP_RM
+LW_RM = Q1_RM- (1.5*IQR_RM);LW_RM
+RM1 = RM[which(RM >= UP_RM)]
+RM2 = RM[which(RM <= LW_RM)]
+length(RM1)
+length(RM2)
+
+# AGE      
+Q1_AGE = quantile(AGE,probs= 0.25);Q1_AGE
+Q3_AGE = quantile(AGE,probs = 0.75);Q3_AGE
+IQR_AGE = IQR(AGE);IQR_AGE
+UP_AGE = Q3_AGE+ (1.5*IQR_AGE);UP_AGE
+LW_AGE = Q1_AGE- (1.5*IQR_AGE);LW_AGE
+AGE1 = AGE[which(AGE >= UP_AGE)]
+length(AGE1)
+
+# DIS      
+Q1_DIS = quantile(DIS,probs= 0.25);Q1_DIS
+Q3_DIS = quantile(DIS,probs = 0.75);Q3_DIS
+IQR_DIS = IQR(DIS);IQR_DIS
+UP_DIS = Q3_DIS+ (1.5*IQR_DIS);UP_DIS
+LW_DIS = Q1_DIS- (1.5*IQR_DIS);LW_DIS
+DIS1 = DIS[which(DIS >= UP_DIS)]
+length(DIS1)
+
+# RAD      
+Q1_RAD = quantile(RAD,probs= 0.25);Q1_RAD
+Q3_RAD = quantile(RAD,probs = 0.75);Q3_RAD
+IQR_RAD = IQR(RAD);IQR_RAD
+UP_RAD = Q3_RAD+ (1.5*IQR_RAD);UP_RAD
+LW_RAD = Q1_RAD- (1.5*IQR_RAD);LW_RAD
+RAD1 = RAD[which(RAD >= UP_RAD)]
+length(RAD1)
+
+# TAX      
+Q1_TAX = quantile(TAX,probs= 0.25);Q1_TAX
+Q3_TAX = quantile(TAX,probs = 0.75);Q3_TAX
+IQR_TAX = IQR(TAX);IQR_TAX
+UP_TAX = Q3_TAX+ (1.5*IQR_TAX);UP_TAX
+LW_TAX = Q1_TAX- (1.5*IQR_TAX);LW_TAX
+TAX1 = TAX[which(TAX >= UP_TAX)]
+length(TAX1)
+
+# PTRATIO      
+Q1_PTRATIO = quantile(PTRATIO,probs= 0.25);Q1_PTRATIO
+Q3_PTRATIO = quantile(PTRATIO,probs = 0.75);Q3_PTRATIO
+IQR_PTRATIO = IQR(PTRATIO);IQR_PTRATIO
+UP_PTRATIO = Q3_PTRATIO+ (1.5*IQR_PTRATIO);UP_PTRATIO
+LW_PTRATIO = Q1_PTRATIO- (1.5*IQR_PTRATIO);LW_PTRATIO
+PTRATIO1 = PTRATIO[which(PTRATIO >= UP_PTRATIO)]
+PTRATIO2 = PTRATIO[which(PTRATIO <= LW_PTRATIO)]
+length(PTRATIO1)
+length(PTRATIO2)
+
+# B
+Q1_B = quantile(B,probs= 0.25);Q1_B
+Q3_B = quantile(B,probs = 0.75);Q3_B
+IQR_B = IQR(B);IQR_B
+UP_B = Q3_B+ (1.5*IQR_B);UP_B
+LW_B = Q1_B- (1.5*IQR_B);LW_B
+B1 = B[which(B >= UP_B)]
+B2 = B[which(B <= LW_B)]
+length(B1)
+length(B2)
+
+# LSTAT
+Q1_LSTAT = quantile(LSTAT,probs= 0.25);Q1_LSTAT
+Q3_LSTAT = quantile(LSTAT,probs = 0.75);Q3_LSTAT
+IQR_LSTAT = IQR(LSTAT);IQR_LSTAT
+UP_LSTAT = Q3_LSTAT+ (1.5*IQR_LSTAT);UP_LSTAT
+LW_LSTAT = Q1_LSTAT- (1.5*IQR_LSTAT);LW_LSTAT
+LSTAT1 = LSTAT[which(LSTAT >= UP_LSTAT)]
+length(LSTAT1)
+
+# MEDV
+Q1_MEDV = quantile(MEDV,probs= 0.25);Q1_MEDV
+Q3_MEDV = quantile(MEDV,probs = 0.75);Q3_MEDV
+IQR_MEDV = IQR(MEDV);IQR_MEDV
+UP_MEDV = Q3_MEDV+ (1.5*IQR_MEDV);UP_MEDV
+LW_MEDV = Q1_MEDV- (1.5*IQR_MEDV);LW_MEDV
+MEDV1 = MEDV[which(MEDV >= UP_MEDV)]
+MEDV2 = MEDV[which(MEDV <= LW_MEDV)]
+length(MEDV1)
+length(MEDV2)
+
+print(paste("Column CRIM outliers = ",length(CRIM1)*100/506,"%"))
+print(paste("Column ZN outliers = ",length(ZN1)*100/506,"%"))
+print(paste("Column INDUS outliers = ",length(INDUS1)*100/506,"%"))
+print(paste("Column CHAS outliers = ",length(CHAS1)*100/506,"%"))
+print(paste("Column NOX outliers = ",length(NOX1)*100/506,"%"))
+print(paste("Column RM outliers = ",(length(RM1)+length(RM2))*100/506,"%"))
+print(paste("Column AGE outliers = ",length(AGE1)*100/506,"%"))
+print(paste("Column DIS outliers = ",length(DIS1)*100/506,"%"))
+print(paste("Column RAD outliers = ",length(RAD1)*100/506,"%"))
+print(paste("Column TAX outliers = ",length(TAX1)*100/506,"%"))
+print(paste("Column PTRATIO outliers = ",(length(PTRATIO2)+length(PTRATIO1))*100/506,"%"))
+print(paste("Column B outliers = ",(length(B1) + length(B2))*100/506,"%"))
+print(paste("Column LSTAT outliers = ",length(LSTAT1)*100/506,"%"))
+print(paste("Column MEDV outliers = ",(length(MEDV1) +length(MEDV2))*100/506,"%"))
+
+        
+```
+<h2>
+<b>
+<center><u>HISTOGRAM AND DISTRIBUTION</u></center>
+</b>
+</h2>
+```{r}
+par(mfrow = c(1,3))
+#CRIM
+hist(CRIM,prob = TRUE)
+lines(density(CRIM),col = "blue",lwd = 2)
+
+#ZN
+hist(ZN,prob = TRUE)
+lines(density(ZN),col = "blue",lwd = 2)
+
+#INDUS
+hist(INDUS,prob = TRUE)
+lines(density(INDUS),col = "blue",lwd = 2)
+
+#CHAS
+hist(CHAS,prob = TRUE)
+lines(density(CHAS),col = "blue",lwd = 2)
+
+#NOX
+hist(NOX,prob = TRUE)
+lines(density(NOX),col = "blue",lwd = 2)
+
+#RM
+hist(RM,prob = TRUE)
+lines(density(RM),col = "blue",lwd = 2)
+
+#AGE
+hist(AGE,prob = TRUE)
+lines(density(AGE),col = "blue",lwd = 2)
+
+#DIS
+hist(DIS,prob = TRUE)
+lines(density(DIS),col = "blue",lwd = 2)
+
+#RAD
+hist(RAD,prob = TRUE)
+lines(density(RAD),col = "blue",lwd = 2)
+
+#TAX
+hist(TAX,prob = TRUE)
+lines(density(TAX),col = "blue",lwd = 2)
+
+#PTRATIO
+hist(PTRATIO,prob = TRUE)
+lines(density(PTRATIO),col = "blue",lwd = 2)
+
+#B
+hist(B,prob = TRUE)
+lines(density(B),col = "blue",lwd = 2)
+
+#LSTAT
+hist(LSTAT,prob = TRUE)
+lines(density(LSTAT),col = "blue",lwd = 2)
+
+#MEDV
+hist(MEDV,prob = TRUE)
+lines(density(MEDV),col = "blue",lwd = 2)
+
+```
+<h3><b>The histogram also shows that columns CRIM, ZN, B has highly skewed distributions. Also MEDV looks to have a normal distribution (the predictions) and other colums seem to have norma or bimodel ditribution of data except CHAS (which is a discrete variable)</b></h3>
+<style>
+h3{
+color :red;
+font-size : 280%;
+font-family:times
+}
+</style>
+
+<h2>
+<b>
+<center><u>CORRELATION</u></center>
+</b>
+</h2>
+
+```{=html}
+<style>
+h2{
+color :red;
+font-family:times
+}
+</style>
+```
+```{r}
+#CORRELATION
+
+corrmatrix = cor(Boston)
+corrmatrix
+corrplot(corrmatrix)
+
+
+```
+
+<h2>
+
+<b>
+
+<center><u>Crime Analysis In Boston</u></center>
+
+</b>
+
+</h2>
+
+```{=html}
+<style>
+h2{
+color :Blue;
+font-family:times
+}
+</style>
+```
+```{r}
+
+
+summary(Boston$CRIM)
+plot_ly(data = Boston,x =~LSTAT,y =~CRIM,type= "scatter",mode = "markers")
+plot_ly(data = Boston,x =~RAD,y =~CRIM,type= "scatter",mode = "markers")
+plot_ly(data = Boston,x =~TAX,y =~CRIM,type= "scatter",mode = "markers")
+quantile(Boston$CRIM,0.9)
+highcrime = subset(Boston,CRIM>quantile(Boston$CRIM,0.9))
+highcrime
+summary(highcrime)
+plot_ly(data = highcrime,x =~LSTAT,y =~CRIM,type= "scatter",mode = "markers")
+plot_ly(data = Boston,y = ~LSTAT,name = "FULL BOSTON DATA",type = "box")%>%
+  add_boxplot(data = highcrime,y = ~LSTAT,name = "Area with 90% percentile crime rate(highcrime",type = 'box')
+
+plot_ly(data = Boston,y = ~MEDV,name = "FULL BOSTON DATA",type = "box")%>%
+  add_boxplot(data = highcrime,y = ~MEDV,name = "Area with 90% percentile crime rate(highcrime",type = 'box')
+
+summary(Boston)
+```
+
+<h2 style="color:Tomato;">
+
+<b>Portion of Population with Lower Status Analysis</b>
+
+</h2>
+
+<p>
+
+From the correlation matrix we can see that there are significant levels of correlation between LSTAT and these variables:
+
+```{=html}
+<pre>
+1.MEDV : negative correlation coefficient
+2.RM   : negative correlation coefficient
+3.AGE  : positive correlation coefficient
+</pre>
+```
+```{r}
+corrmatrix
+plot_ly(data = Boston,x=~LSTAT,y=~MEDV,type = "scatter",mode = "markers")
+plot_ly(data = Boston,x=~LSTAT,y=~RM,type = "scatter",mode = "markers")
+plot_ly(data = Boston,x=~LSTAT,y=~AGE,type = "scatter",mode = "markers")
+
+# THOSE AREAS WHICH ARE ABOVE THE 90TH PERCENTILE OF LSTAT
+summary(Boston$LSTAT)
+quantile(Boston$LSTAT,0.9)
+highlstat = subset(Boston,LSTAT>quantile(Boston$LSTAT,0.9))
+
+plot_ly(data = Boston,y = ~MEDV,name = "FULL BOSTON DATA",type = "box")%>%
+  add_boxplot(data = highlstat,y = ~MEDV,name = "Area with 90% percentile LSTAT",type = 'box')
+
+plot_ly(data = Boston,y = ~RM,name = "FULL BOSTON DATA",type = "box")%>%
+  add_boxplot(data = highlstat,y = ~RM,name = "Area with 90% percentile LSTAT",type = 'box')
+
+plot_ly(data = Boston,y = ~AGE,name = "FULL BOSTON DATA",type = "box")%>%
+  add_boxplot(data = highlstat,y = ~AGE,name = "Area with 90% percentile LSTAT",type = 'box')
+
+plot_ly(data = Boston,y = ~CRIM,name = "FULL BOSTON DATA",type = "box")%>%
+  add_boxplot(data = highlstat,y = ~CRIM,name = "Area with 90% percentile LSTAT",type = 'box')
+
+plot_ly(data = Boston,y = ~NOX,name = "FULL BOSTON DATA",type = "box")%>%
+  add_boxplot(data = highlstat,y = ~NOX,name = "Area with 90% percentile LSTAT",type = 'box')
+```
+
+<h2 style="color:Tomato;">
+
+<b><u> LINEAR REGRESSION </u></b>
+
+</h2>
+
+```{r}
+##SIMPLE LINEAR REGRESSION
+
+####any(is.na(Boston))
+####numb = length(which(is.na(Boston) == TRUE))
+####if (numb>0){
+####  Boston = Boston[complete.case(Boston),]
+####}
+####numb
+
+set.seed(0)
+split = sample.split(Boston,SplitRatio = 0.8)
+
+train = subset(Boston,split == TRUE)
+test  = subset(Boston,split == FALSE)
+
+head(train)
+
+model = lm(MEDV~LSTAT,data = train)
+summary(model)
+
+pred = predict(model,test)
+rmse(pred,test[,14])
+
+data = data.frame(LSTAT = (1:30),MEDV = predict(model,data.frame(LSTAT=(1:30))))
+plot_ly() %>% add_trace(x = ~LSTAT,y = ~MEDV,type = "scatter",mode = "lines",data = data,name ="Predicted Value")%>%
+  add_trace(x = ~LSTAT,y = ~MEDV,type = "scatter",mode = "markers",data = test,name ="Predicted Value")
+
+```
+
+<h4 style="color:Tomato;">
+
+<b> POLYNOMIAL REGRESSION </b>
+
+</h4>
+
+```{r}
+
+model = lm(MEDV~LSTAT + I(LSTAT^2),data = train)
+summary(model)
+
+pred = predict(model,test)
+rmse(pred,test[,14])
+
+data = data.frame(LSTAT = (1:35),MEDV = predict(model,data.frame(LSTAT=(1:35))))
+plot_ly() %>% add_trace(x = ~LSTAT,y = ~MEDV,type = "scatter",mode = "lines",data = data,name ="Predicted Value")%>%
+  add_trace(x = ~LSTAT,y = ~MEDV,type = "scatter",mode = "markers",data = test,name ="Predicted Value")
+ 
+```
+
+<h5 style="color:Tomato;">
+
+<b> POLYNOMIAL REGRESSION </b>
+
+</h5>
+
+```{r}
+model = lm(MEDV~LSTAT + I(LSTAT^2)+I(LSTAT^3),data = train)
+summary(model)
+
+pred = predict(model,test)
+rmse(pred,test[,14])
+
+data = data.frame(LSTAT = (1:35),MEDV = predict(model,data.frame(LSTAT=(1:35))))
+plot_ly() %>% add_trace(x = ~LSTAT,y = ~MEDV,type = "scatter",mode = "lines",data = data,name ="Predicted Value")%>%
+  add_trace(x = ~LSTAT,y = ~MEDV,type = "scatter",mode = "markers",data = test,name ="Predicted Value")
+
+summary(model)
+plot(model)
+```
+
+<h1 style="color:Tomato;">
+
+<b> MULTIPLE REGRESSION MODEL </b>
+
+</h1>
+
+```{r}
+model = lm(MEDV~LSTAT + I(LSTAT^2)+I(LSTAT^3)+RM+CRIM+AGE+DIS+RAD+TAX+PTRATIO+B,data = train)
+summary(model)
+
+pred = predict(model,test)
+rmse(pred,test[,14])
+
+summary(model)
+plot(model)
+
+
+```
+
+```{r}
+model = lm(MEDV~LSTAT + I(LSTAT^2)+RM+CRIM+DIS+RM+TAX+PTRATIO+B,data = train)
+summary(model)
+
+pred = predict(model,test)
+rmse(pred,test[,14])
+
+summary(model)
+plot(model)
+
+```
+
+<h3>MODEL AFTER REMOVING THE OUTLIERS</h3>
+```{r}
+##### LSTAT
+
+LSTAT1 = LSTAT[!(LSTAT >= UP_LSTAT | LSTAT <= LW_LSTAT)]
+View(LSTAT1)
+length(LSTAT1)
+
+
+par(mfrow = c(1,2))
+plot(LSTAT)          
+abline(h = UP_LSTAT,col ="blue")               
+abline(h = LW_LSTAT,col = "red")               
+abline(h = LW_LSTAT,col = "red")
+
+
+new_boston1 = Boston[Boston$LSTAT<= UP_LSTAT,]
+dim(new_boston1)
+view(new_boston1)
+
+boxplot(LSTAT)
+boxplot(LSTAT1)
+plot(LSTAT1)
+abline(h = UP_LSTAT,col="blue")
+
+#PTRATIO
+PTRATIO1 = PTRATIO[!(PTRATIO >= UP_PTRATIO | PTRATIO <= LW_PTRATIO)]
+View(PTRATIO1)
+length(PTRATIO1)
+
+
+par(mfrow = c(1,2))
+plot(PTRATIO)          
+abline(h = UP_PTRATIO,col ="blue")               
+abline(h = LW_PTRATIO,col = "red")
+plot(PTRATIO1)
+abline(h = UP_PTRATIO,col="blue")               
+abline(h = LW_PTRATIO,col = "red")
+
+
+new_boston2 = new_boston1[new_boston1$PTRATIO >=  LW_PTRATIO,]
+dim(new_boston2)
+view(new_boston2)
+
+boxplot(PTRATIO)
+boxplot(PTRATIO1)
+
+#DIS
+DIS1 = DIS[!(DIS >= UP_DIS | DIS <= LW_DIS)]
+View(DIS1)
+length(DIS1)
+
+
+par(mfrow = c(1,2))
+plot(DIS)          
+abline(h = UP_DIS,col ="blue")               
+abline(h = LW_DIS,col = "red")
+plot(DIS1)
+abline(h = UP_DIS,col="blue")               
+abline(h = LW_DIS,col = "red")
+
+
+new_boston3 = new_boston2[new_boston2$DIS <=  UP_DIS,]
+dim(new_boston3)
+view(new_boston3)
+
+boxplot(DIS)
+boxplot(DIS1)
+
+#CRIM
+par(mfrow = c(1,3))
+plot(CRIM)
+plot(CRIM[which(CRIM >= UP_CRIM)])
+abline(h = UP_CRIM,col = "blue")
+abline(h = LW_CRIM,col = "red")
+new_CRIM = replace(new_boston3$CRIM,which(new_boston3$CRIM >= UP_CRIM),UP_CRIM);length(new_CRIM)
+plot(new_CRIM)
+abline(h = UP_CRIM,col = "blue")
+abline(h = LW_CRIM,col = "red")
+
+new_boston3$CRIM = new_CRIM
+boxplot(new_boston3$CRIM)
+
+#RM
+
+par(mfrow = c(1,3))
+plot(RM)
+abline(h = UP_RM,col = "blue")
+abline(h = LW_RM,col = "red")
+plot(RM[which(RM >= UP_RM)])
+abline(h = UP_RM,col = "blue")
+abline(h = LW_RM,col = "red")
+new_RM = replace(new_boston3$RM,which(new_boston3$RM >= UP_RM),UP_RM);length(new_RM)
+new_RM1 = replace(new_RM,which(new_RM <= LW_RM),LW_RM);length(new_RM1)
+plot(new_RM1)
+abline(h = UP_RM,col = "blue")
+abline(h = LW_RM,col = "red")
+
+new_boston3$RM = new_RM1
+boxplot(new_boston3$RM)
+
+#ZN
+boxplot(ZN)
+par(mfrow = c(1,3))
+plot(ZN)
+abline(h = UP_ZN,col = "blue")
+abline(h = LW_ZN,col = "red")
+plot(ZN[which(ZN >= UP_ZN)])
+abline(h = UP_ZN,col = "blue")
+abline(h = LW_ZN,col = "red")
+new_ZN = replace(new_boston3$ZN,which(new_boston3$ZN >= UP_ZN),UP_ZN);length(new_ZN)
+plot(new_ZN)
+abline(h = UP_ZN,col = "blue")
+abline(h = LW_ZN,col = "red")
+
+new_boston3$ZN = new_ZN
+plot(new_boston3$ZN)
+
+#B
+boxplot(new_boston3$B)
+
+par(mfrow = c(1,3))
+plot(B)
+plot(B[which(B <= LW_B)])
+abline(h = UP_B,col = "blue")
+abline(h = LW_B,col = "red")
+new_B = replace(new_boston3$B,which(new_boston3$B <= LW_B),LW_B);length(new_B)
+plot(new_B)
+abline(h = UP_B,col = "blue")
+abline(h = LW_B,col = "red")
+
+new_boston3$B = new_B
+boxplot(new_boston3$B)
+
+Boston = new_boston3
+dim(Boston)
+```
+
+
